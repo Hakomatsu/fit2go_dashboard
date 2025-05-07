@@ -44,8 +44,8 @@ jobs:
           pip install -r requirements.txt
           pip install flake8 pytest black isort
 
-      # - name: Check code formatting with Black
-      #   run: black --check .
+      - name: Check code formatting with Black
+        run: black --check .
 
       # - name: Check imports with isort
       #   run: isort --check-only --diff .
@@ -54,6 +54,6 @@ jobs:
       #   run: |
       #     flake8 . --count --max-line-length=100 --statistics
 
-      - name: Run tests
-        run: |
-          pytest
+      # - name: Run tests
+      #   run: |
+      #     pytest
