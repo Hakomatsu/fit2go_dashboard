@@ -286,3 +286,24 @@ def download_data():
             )
     else:
         return jsonify({'error': 'Unsupported format. Use "json" or "csv"'}), 400
+
+@bp.route('/sessions/<int:session_id>/end', methods=['POST'])
+def end_session(session_id):
+    """セッションを終了し、必要に応じてヘルスサービスと同期"""
+    from ..services.google_fit import end_fitness_session
+    
+    auto_sync = request.args.get('auto_sync', 'true').lower() == 'true'
+    result = end_fitness_session(session_id, auto_sync=auto_sync)
+    
+    if result["success"]:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result["error"]}), 400
+
+@bp.route('/sessions/<int:session_id>/sync', methods=['POST'])
+def sync_session(session_id):
+    """セッションを手動でヘルスサービスと同期"""
+    from ..services.google_fit import sync_session_to_services
+    
+    result = sync_session_to_services(session_id)
+    return jsonify(result), 200 if any(r["success"] for r in result.values()) else 400

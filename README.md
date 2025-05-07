@@ -75,7 +75,7 @@ flask run
 ## Deployment
 
 This application is configured to be deployed on [Render](https://render.com).
-For detailed deployment instructions, please refer to the [deployment guide](docs/deployment.md).
+For detailed deployment instructions, please refer to the [deployment guide](deployment.md).
 
 ## Contributing
 

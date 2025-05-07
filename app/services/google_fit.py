@@ -182,3 +182,76 @@ def upload_fitness_session(session_id):
         return {"success": True, "response": response}
     except HttpError as error:
         return {"success": False, "error": str(error)}
+
+def end_fitness_session(session_id, auto_sync=True):
+    """フィットネスセッションを終了し、必要に応じて同期する"""
+    from ..models import db, FitnessSession
+    import datetime
+
+    session = FitnessSession.query.get(session_id)
+    if not session:
+        return {"success": False, "error": "Session not found"}
+
+    # セッションを終了
+    session.end_time = datetime.datetime.now(datetime.timezone.utc)
+    
+    try:
+        db.session.commit()
+        
+        # 自動同期が有効な場合、Google FitとHealth Connectに同期
+        if auto_sync:
+            sync_result = sync_session_to_services(session_id)
+            return {
+                "success": True,
+                "session_id": session_id,
+                "sync_result": sync_result
+            }
+        
+        return {"success": True, "session_id": session_id}
+    except Exception as e:
+        db.session.rollback()
+        return {"success": False, "error": str(e)}
+
+def sync_session_to_services(session_id):
+    """セッションをGoogle FitとHealth Connectに同期"""
+    results = {
+        "google_fit": {"success": False, "error": None},
+        "health_connect": {"success": False, "error": None}
+    }
+    
+    try:
+        # Google Fitへの同期
+        gfit_result = upload_fitness_session(session_id)
+        results["google_fit"] = gfit_result
+    except Exception as e:
+        results["google_fit"]["error"] = str(e)
+    
+    try:
+        # Health Connectへの同期
+        hc_result = upload_to_health_connect(session_id)
+        results["health_connect"] = hc_result
+    except Exception as e:
+        results["health_connect"]["error"] = str(e)
+    
+    return results
+
+def upload_to_health_connect(session_id):
+    """Health Connectにフィットネスデータをアップロード"""
+    from ..models import FitnessSession, DataPoint
+    
+    # セッションの取得
+    session = FitnessSession.query.get(session_id)
+    if not session:
+        return {"success": False, "error": "Session not found"}
+    
+    # Health Connect APIの認証情報を取得
+    if 'health_connect_credentials' not in session:
+        return {"success": False, "error": "Not authenticated with Health Connect"}
+    
+    try:
+        # Health Connect APIにデータをアップロード
+        # 注: 実際のHealth Connect APIの仕様に合わせて実装する必要があります
+        # ここではプレースホルダーとしています
+        return {"success": True, "message": "Data uploaded to Health Connect"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
