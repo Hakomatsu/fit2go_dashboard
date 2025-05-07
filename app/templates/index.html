@@ -110,6 +110,48 @@
         </div>
     </div>
 </div>
+
+<!-- データ連携 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">データ連携</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Google Fit</h5>
+                                <p class="card-text">フィットネスデータをGoogle Fitと連携して、あなたの健康データを一元管理しましょう。</p>
+                                <a href="{{ url_for('main.connect_google_fit') }}" class="btn btn-primary">
+                                    <i class="bi bi-google"></i> Google Fitと連携
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">データのダウンロード</h5>
+                                <p class="card-text">すべてのフィットネスデータをダウンロードして、自由に活用しましょう。</p>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('api.download_data', format='json') }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-file-earmark-code"></i> JSON形式
+                                    </a>
+                                    <a href="{{ url_for('api.download_data', format='csv') }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV形式
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}

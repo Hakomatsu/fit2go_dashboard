@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 import pytz
 import json
+from ..services.google_fit import get_authorization_url, handle_callback, upload_fitness_session
 
 bp = Blueprint('main', __name__)
 
@@ -90,3 +91,31 @@ def get_cumulative_stats():
         'total_distance_km': float(stats.total_distance) if stats.total_distance else 0,
         'total_calories_kcal': float(stats.total_calories) if stats.total_calories else 0
     })
+
+@bp.route('/connect/google-fit')
+def connect_google_fit():
+    """Google Fitとの連携を開始"""
+    # 認証URLを取得してリダイレクト
+    auth_url = get_authorization_url()
+    return redirect(auth_url)
+
+@bp.route('/google-fit/callback')
+def google_fit_callback():
+    """Google Fit認証コールバック"""
+    try:
+        # コールバックを処理
+        handle_callback(request)
+        return redirect(url_for('main.index', status='connected'))
+    except Exception as e:
+        current_app.logger.error(f"Google Fit認証エラー: {str(e)}")
+        return redirect(url_for('main.index', status='error'))
+
+@bp.route('/api/sessions/<int:session_id>/share/google-fit', methods=['POST'])
+def share_to_google_fit(session_id):
+    """特定のセッションをGoogle Fitに共有"""
+    try:
+        result = upload_fitness_session(session_id)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Google Fitへのデータ共有エラー: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500

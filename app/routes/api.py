@@ -132,3 +132,157 @@ def upload_data():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+# app/routes/api.pyに追加
+
+@bp.route('/download', methods=['GET'])
+def download_data():
+    """
+    フィットネスデータをダウンロードするためのエンドポイント
+    クエリパラメータ:
+    - format: 'csv' または 'json' (デフォルトは 'json')
+    - start_date: データの開始日 (ISO形式: YYYY-MM-DD)
+    - end_date: データの終了日 (ISO形式: YYYY-MM-DD)
+    - device_id: 特定デバイスのみのデータをフィルタリング (オプション)
+    """
+    from flask import send_file
+    import pandas as pd
+    import tempfile
+    import os
+    import json
+    from datetime import datetime, timedelta, time
+
+    # クエリパラメータの取得
+    format_type = request.args.get('format', 'json')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    device_id = request.args.get('device_id')
+
+    # 日付バリデーション
+    try:
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            start_date = datetime.combine(start_date.date(), time.min)
+        else:
+            # デフォルトは30日前
+            start_date = datetime.now() - timedelta(days=30)
+            start_date = datetime.combine(start_date.date(), time.min)
+
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = datetime.combine(end_date.date(), time.max)
+        else:
+            # デフォルトは今日
+            end_date = datetime.now()
+            end_date = datetime.combine(end_date.date(), time.max)
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+    # クエリ構築
+    query = FitnessSession.query.filter(
+        FitnessSession.start_time.between(start_date, end_date)
+    )
+    
+    if device_id:
+        query = query.filter(FitnessSession.device_id == device_id)
+
+    sessions = query.all()
+
+    # データの準備
+    result = []
+    for session in sessions:
+        session_data = {
+            'id': session.id,
+            'device_id': session.device_id,
+            'start_time': session.start_time.isoformat(),
+            'end_time': session.end_time.isoformat() if session.end_time else None,
+            'total_time_seconds': session.total_time_seconds,
+            'total_distance_km': session.total_distance_km,
+            'total_calories_kcal': session.total_calories_kcal,
+            'average_speed_kmh': session.average_speed_kmh,
+            'average_rpm': session.average_rpm,
+            'average_mets': session.average_mets,
+            'data_points': []
+        }
+        
+        # データポイントの取得
+        data_points = DataPoint.query.filter_by(session_id=session.id).order_by(DataPoint.timestamp).all()
+        
+        for point in data_points:
+            point_data = {
+                'timestamp': point.timestamp.isoformat(),
+                'speed_kmh': point.speed_kmh,
+                'rpm': point.rpm,
+                'distance_km': point.distance_km,
+                'calories_kcal': point.calories_kcal,
+                'time_seconds': point.time_seconds,
+                'mets': point.mets
+            }
+            session_data['data_points'].append(point_data)
+            
+        result.append(session_data)
+
+    # リクエストされたフォーマットに応じたレスポンスを生成
+    if format_type.lower() == 'json':
+        # JSONとして返す
+        return jsonify(result)
+    
+    elif format_type.lower() == 'csv':
+        # CSVに変換
+        sessions_df = pd.DataFrame([{
+            'session_id': s['id'],
+            'device_id': s['device_id'],
+            'start_time': s['start_time'],
+            'end_time': s['end_time'],
+            'total_time_seconds': s['total_time_seconds'],
+            'total_distance_km': s['total_distance_km'],
+            'total_calories_kcal': s['total_calories_kcal'],
+            'average_speed_kmh': s['average_speed_kmh'],
+            'average_rpm': s['average_rpm'],
+            'average_mets': s['average_mets']
+        } for s in result])
+        
+        # データポイントの展開
+        points_data = []
+        for s in result:
+            for p in s['data_points']:
+                point = {
+                    'session_id': s['id'],
+                    'timestamp': p['timestamp'],
+                    'speed_kmh': p['speed_kmh'],
+                    'rpm': p['rpm'],
+                    'distance_km': p['distance_km'],
+                    'calories_kcal': p['calories_kcal'],
+                    'time_seconds': p['time_seconds'],
+                    'mets': p['mets']
+                }
+                points_data.append(point)
+        
+        points_df = pd.DataFrame(points_data) if points_data else pd.DataFrame()
+        
+        # 一時ファイルを作成
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sessions_file = os.path.join(temp_dir, 'sessions.csv')
+            points_file = os.path.join(temp_dir, 'data_points.csv')
+            zip_file = os.path.join(temp_dir, 'fitness_data.zip')
+            
+            # CSVファイルを保存
+            sessions_df.to_csv(sessions_file, index=False)
+            if not points_df.empty:
+                points_df.to_csv(points_file, index=False)
+            
+            # ZIPファイルに圧縮
+            import zipfile
+            with zipfile.ZipFile(zip_file, 'w') as zipf:
+                zipf.write(sessions_file, arcname='sessions.csv')
+                if not points_df.empty:
+                    zipf.write(points_file, arcname='data_points.csv')
+            
+            # ファイルを送信
+            return send_file(
+                zip_file,
+                as_attachment=True,
+                download_name='fitness_data.zip',
+                mimetype='application/zip'
+            )
+    else:
+        return jsonify({'error': 'Unsupported format. Use "json" or "csv"'}), 400
