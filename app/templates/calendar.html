@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar{% endblock %}
+
+{% block extra_head %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.0/main.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- カレンダー -->
+        <div class="card">
+            <div class="card-body">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <!-- 日次サマリー -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Daily Summary</h5>
+            </div>
+            <div class="card-body">
+                <div id="daily-stats">
+                    <p class="text-muted">Select a date to view details</p>
+                </div>
+                <div id="daily-activity-plot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- データ詳細モーダル -->
+<div class="modal fade" id="sessionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Session Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="session-details-plots"></div>
+                <div id="session-metrics" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.0/main.min.js"></script>
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}

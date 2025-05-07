@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- リアルタイムメトリクス -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">リアルタイムメトリクス</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- スピードメーター -->
+                    <div class="col-md-4">
+                        <div id="speed-gauge"></div>
+                    </div>
+                    <!-- RPMメーター -->
+                    <div class="col-md-4">
+                        <div id="rpm-gauge"></div>
+                    </div>
+                    <!-- METsメーター -->
+                    <div class="col-md-4">
+                        <div id="mets-gauge"></div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <h6>Distance</h6>
+                            <p id="current-distance">0.00 km</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <h6>Calories</h6>
+                            <p id="current-calories">0 kcal</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <h6>Time</h6>
+                            <p id="current-time">00:00:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 時系列グラフ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">セッション履歴</h5>
+            </div>
+            <div class="card-body">
+                <div id="session-history-plot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- デイリーサマリー -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Today's Summary</h5>
+            </div>
+            <div class="card-body">
+                <div id="daily-summary-plot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 累積データ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">累積データ</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <h6>Total Time</h6>
+                            <p id="total-time">0h 0m</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <h6>Total Distance</h6>
+                            <p id="total-distance">0.00 km</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <h6>Total Calories</h6>
+                            <p id="total-calories">0 kcal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
