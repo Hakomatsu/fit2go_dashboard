@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from sqlalchemy.dialects.postgresql import JSONB
-
 from . import db
 
 
@@ -18,7 +16,7 @@ class FitnessSession(db.Model):
     average_speed_kmh = db.Column(db.Float, default=0.0)
     average_rpm = db.Column(db.Float, default=0.0)
     average_mets = db.Column(db.Float, default=0.0)
-    raw_data = db.Column(JSONB)
+    raw_data = db.Column(db.JSON)  # SQLiteではJSON型を使用
     data_points = db.relationship(
         "DataPoint", backref="session", lazy=True, cascade="all, delete-orphan"
     )

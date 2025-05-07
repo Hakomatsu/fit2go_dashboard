@@ -213,6 +213,9 @@ function updateRealTimeData() {
     fetch('/api/sessions/current')
         .then(response => response.json())
         .then(data => {
+            // デバッグ出力を追加
+            console.log('Received session data:', data);
+            
             if (data.status === 'no_active_session') {
                 if (activeSessionId) {
                     // アクティブなセッションが終了された場合
@@ -230,18 +233,27 @@ function updateRealTimeData() {
             Plotly.update('rpm-gauge', {'value': [data.current_rpm]});
             Plotly.update('mets-gauge', {'value': [data.current_mets]});
 
-            // メトリクスの更新
+            // デバッグ出力を追加
+            console.log('Updating metrics:');
+            console.log('Distance:', data.session_dist_km);
+            console.log('Calories:', data.session_cal_kcal);
+            console.log('Time:', data.session_time_s);
+
+            // リアルタイムメトリクスの更新（セッションデータ）
             document.getElementById('current-distance').textContent = 
-                `${data.total_distance_km.toFixed(2)} km`;
+                `${(data.session_dist_km || 0).toFixed(2)} km`;
             document.getElementById('current-calories').textContent = 
-                `${Math.round(data.total_calories_kcal)} kcal`;
+                `${Math.round(data.session_cal_kcal || 0)} kcal`;
             document.getElementById('current-time').textContent = 
-                formatTime(data.total_time_seconds);
+                formatTime(data.session_time_s || 0);
 
             // セッション履歴の更新
             updateSessionHistory();
         })
-        .catch(error => console.error('Error fetching current session:', error));
+        .catch(error => {
+            console.error('Error fetching current session:', error);
+            console.error('Stack trace:', error.stack);
+        });
 }
 
 // セッション履歴の更新

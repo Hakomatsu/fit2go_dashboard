@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 
 import pytz
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request, redirect, url_for
 from sqlalchemy import func
 
 from ..models import DataPoint, FitnessSession, db
@@ -70,36 +70,38 @@ def get_daily_stats():
 
     # 15分単位でデータを集計
     interval = 15  # minutes
-    stats = (
-        db.session.query(
-            func.date_trunc("hour", DataPoint.timestamp)
-            + func.floor(func.date_part("minute", DataPoint.timestamp) / interval)
-            * timedelta(minutes=interval),
-            func.avg(DataPoint.speed_kmh).label("avg_speed"),
-            func.avg(DataPoint.rpm).label("avg_rpm"),
-            func.sum(DataPoint.distance_km).label("total_distance"),
-            func.sum(DataPoint.calories_kcal).label("total_calories"),
-            func.count(DataPoint.id).label("point_count"),
-        )
-        .filter(DataPoint.timestamp.between(start_time, end_time))
-        .group_by(1)
-        .order_by(1)
-        .all()
-    )
+    stats = []
+    
+    # 24時間分の15分間隔のデータを生成
+    for hour in range(24):
+        for minute in range(0, 60, interval):
+            interval_start = start_time + timedelta(hours=hour, minutes=minute)
+            interval_end = interval_start + timedelta(minutes=interval)
+            
+            # 各時間間隔のデータを集計
+            data = (
+                db.session.query(
+                    func.avg(DataPoint.speed_kmh).label("avg_speed"),
+                    func.avg(DataPoint.rpm).label("avg_rpm"),
+                    func.sum(DataPoint.distance_km).label("total_distance"),
+                    func.sum(DataPoint.calories_kcal).label("total_calories"),
+                    func.count(DataPoint.id).label("point_count"),
+                )
+                .filter(DataPoint.timestamp >= interval_start)
+                .filter(DataPoint.timestamp < interval_end)
+                .first()
+            )
+            
+            stats.append({
+                "time": interval_start.isoformat(),
+                "avg_speed": float(data.avg_speed) if data.avg_speed else 0,
+                "avg_rpm": float(data.avg_rpm) if data.avg_rpm else 0,
+                "total_distance": float(data.total_distance) if data.total_distance else 0,
+                "total_calories": float(data.total_calories) if data.total_calories else 0,
+                "point_count": data.point_count,
+            })
 
-    return jsonify(
-        [
-            {
-                "time": time.isoformat(),
-                "avg_speed": float(avg_speed) if avg_speed else 0,
-                "avg_rpm": float(avg_rpm) if avg_rpm else 0,
-                "total_distance": float(total_distance) if total_distance else 0,
-                "total_calories": float(total_calories) if total_calories else 0,
-                "point_count": point_count,
-            }
-            for time, avg_speed, avg_rpm, total_distance, total_calories, point_count in stats
-        ]
-    )
+    return jsonify(stats)
 
 
 @bp.route("/api/sessions/cumulative")
@@ -153,3 +155,114 @@ def share_to_google_fit(session_id):
     except Exception as e:
         current_app.logger.error(f"Google Fitへのデータ共有エラー: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/api/calendar/fit2go")
+def get_fit2go_calendar_data():
+    """カレンダー表示用のFit2Goセッションデータを取得"""
+    start_date = request.args.get("start")
+    end_date = request.args.get("end")
+
+    try:
+        start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return jsonify({"error": "Invalid date format"}), 400
+
+    # セッションデータを取得
+    sessions = FitnessSession.query.filter(
+        FitnessSession.start_time.between(start, end)
+    ).all()
+
+    events = []
+    for session in sessions:
+        events.append({
+            "id": session.id,
+            "title": f"Exercise ({session.total_distance_km:.1f}km)",
+            "start": session.start_time.isoformat(),
+            "end": session.end_time.isoformat() if session.end_time else None,
+            "extendedProps": {
+                "distance": session.total_distance_km,
+                "calories": session.total_calories_kcal,
+                "duration": session.total_time_seconds,
+                "avg_speed": session.average_speed_kmh,
+                "avg_rpm": session.average_rpm,
+                "avg_mets": session.average_mets,
+            }
+        })
+
+    return jsonify(events)
+
+
+@bp.route("/api/calendar/googlefit")
+def get_googlefit_calendar_data():
+    """カレンダー表示用のGoogle Fitデータを取得"""
+    # 現在は未実装のため、空のリストを返す
+    return jsonify([])
+
+
+@bp.route("/api/calendar/healthconnect")
+def get_healthconnect_calendar_data():
+    """カレンダー表示用のHealth Connectデータを取得"""
+    # 現在は未実装のため、空のリストを返す
+    return jsonify([])
+
+
+@bp.route("/api/daily/<source>/<date>")
+def get_daily_source_data(source, date):
+    """特定のソースの日次データを取得"""
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({"error": "Invalid date format"}), 400
+
+    start_time = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_time = start_time + timedelta(days=1)
+
+    if source == "fit2go":
+        # Fit2Goのデータを取得
+        sessions = FitnessSession.query.filter(
+            FitnessSession.start_time.between(start_time, end_time)
+        ).all()
+
+        daily_data = {
+            "total_time_seconds": sum(s.total_time_seconds or 0 for s in sessions),
+            "total_distance_km": sum(s.total_distance_km or 0 for s in sessions),
+            "total_calories_kcal": sum(s.total_calories_kcal or 0 for s in sessions),
+            "sessions": [
+                {
+                    "id": s.id,
+                    "start_time": s.start_time.isoformat(),
+                    "end_time": s.end_time.isoformat() if s.end_time else None,
+                    "duration": s.total_time_seconds,
+                    "distance": s.total_distance_km,
+                    "calories": s.total_calories_kcal,
+                    "avg_speed": s.average_speed_kmh,
+                    "avg_rpm": s.average_rpm,
+                    "avg_mets": s.average_mets,
+                }
+                for s in sessions
+            ],
+        }
+        return jsonify(daily_data)
+
+    elif source == "googlefit":
+        # Google Fitのデータは現在未実装
+        return jsonify({
+            "total_time_seconds": 0,
+            "total_distance_km": 0,
+            "total_calories_kcal": 0,
+            "sessions": []
+        })
+
+    elif source == "healthconnect":
+        # Health Connectのデータは現在未実装
+        return jsonify({
+            "total_time_seconds": 0,
+            "total_distance_km": 0,
+            "total_calories_kcal": 0,
+            "sessions": []
+        })
+
+    else:
+        return jsonify({"error": "Invalid source"}), 400

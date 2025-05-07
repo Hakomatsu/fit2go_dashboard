@@ -6,6 +6,9 @@ load_dotenv()
 
 
 class Config:
+    # Environment configuration
+    ENV = os.environ.get("FLASK_ENV", "development")
+
     # Basic Flask configuration
     SECRET_KEY = os.environ.get("SECRET_KEY")
     if not SECRET_KEY:
@@ -18,7 +21,7 @@ class Config:
     if not SQLALCHEMY_DATABASE_URI:
         if os.environ.get("FLASK_ENV") == "production":
             raise ValueError("DATABASE_URL must be set in production")
-        SQLALCHEMY_DATABASE_URI = "postgresql://localhost/fit2go_dashboard"
+        SQLALCHEMY_DATABASE_URI = "sqlite:///fit2go.db"  # SQLiteを使用
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -31,6 +34,11 @@ class Config:
         if os.environ.get("FLASK_ENV") == "production":
             raise ValueError("API_TOKEN must be set in production")
         API_TOKEN = "dev-token-please-change-in-production"
+
+    # Google Fit OAuth 2.0 configuration
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "your-client-id")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "your-client-secret")
+    GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/google-fit/callback")
 
 
 class DevelopmentConfig(Config):
