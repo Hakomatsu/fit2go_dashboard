@@ -4,6 +4,8 @@
 
 [日本語版はこちら](README_jp.md)
 
+**Note: All code in this repository was generated using GitHub Copilot Agent.**
+
 A web dashboard application for the Flexispot Sit2Go fitness chair. This application visualizes fitness data sent from M5Stack devices in real-time and manages exercise records.
 
 ## Key Features

@@ -4,6 +4,8 @@
 
 [English version here](README.md)
 
+**注意: このリポジトリのすべてのコードは GitHub Copilot Agent を使用して生成されています。**
+
 Fit2Go DashboardはFlexispot Sit2Go フィットネスチェア用のWebダッシュボードアプリケーションです。M5Stackデバイスから送信されるフィットネスデータをリアルタイムで可視化し、運動記録を管理します。
 
 ## 主な機能
