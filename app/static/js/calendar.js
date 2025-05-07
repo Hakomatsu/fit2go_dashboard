@@ -1,177 +1,278 @@
 document.addEventListener('DOMContentLoaded', function() {
-    let calendar;
-    
-    initializeCalendar();
-    loadSessionDates();
-    
-    function initializeCalendar() {
-        const calendarEl = document.getElementById('calendar');
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'ja',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
+    // カレンダーの初期化
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        },
+        eventSources: [
+            {
+                url: '/api/calendar/fit2go',
+                color: '#0275d8',
+                id: 'fit2go'
             },
-            dateClick: function(info) {
-                loadDailyStats(info.dateStr);
+            {
+                url: '/api/calendar/googlefit',
+                color: '#5cb85c',
+                id: 'googlefit'
             },
-            eventClick: function(info) {
-                showSessionDetails(info.event.extendedProps.sessionId);
+            {
+                url: '/api/calendar/healthconnect',
+                color: '#f0ad4e',
+                id: 'healthconnect'
+            }
+        ],
+        eventClick: function(info) {
+            showSessionDetails(info.event);
+        },
+        dateClick: function(info) {
+            showDailySummary(info.date);
+        }
+    });
+    calendar.render();
+
+    // データソースの表示/非表示の切り替え
+    document.getElementById('showFit2GoData').addEventListener('change', function(e) {
+        toggleEventSource('fit2go', e.target.checked);
+    });
+
+    document.getElementById('showGoogleFitData').addEventListener('change', function(e) {
+        toggleEventSource('googlefit', e.target.checked);
+    });
+
+    document.getElementById('showHealthConnectData').addEventListener('change', function(e) {
+        toggleEventSource('healthconnect', e.target.checked);
+    });
+
+    function toggleEventSource(sourceId, show) {
+        const eventSource = calendar.getEventSourceById(sourceId);
+        if (show) {
+            eventSource.enable();
+        } else {
+            eventSource.disable();
+        }
+        calendar.refetchEvents();
+    }
+
+    // セッション詳細の表示
+    async function showSessionDetails(event) {
+        const modal = new bootstrap.Modal(document.getElementById('sessionModal'));
+        
+        // セッションデータの取得
+        const sessionData = await fetchSessionData(event.id);
+        const healthData = await fetchIntegratedHealthData(event.start);
+        
+        // プロット作成
+        createSessionPlots(sessionData);
+        createHealthMetricsPlot(healthData);
+        
+        // メトリクス表示
+        updateSessionMetrics(sessionData);
+        
+        modal.show();
+    }
+
+    // 日次サマリーの表示
+    async function showDailySummary(date) {
+        document.getElementById('selected-date').textContent = date.toLocaleDateString();
+        
+        // 各データソースからデータを取得
+        const [fit2goData, googleFitData, healthConnectData] = await Promise.all([
+            fetchDailyFit2GoData(date),
+            fetchGoogleFitData(date),
+            fetchHealthConnectData(date)
+        ]);
+        
+        // データの統合と表示
+        const integratedData = integrateHealthData(fit2goData, googleFitData, healthConnectData);
+        updateIntegratedStats(integratedData);
+        createDailyActivityPlot(integratedData);
+    }
+
+    // 統合データの表示更新
+    function updateIntegratedStats(data) {
+        const integratedStats = document.getElementById('integrated-stats');
+        integratedStats.style.display = 'block';
+        
+        document.getElementById('avg-heart-rate').textContent = 
+            data.avgHeartRate ? `${Math.round(data.avgHeartRate)} bpm` : '-- bpm';
+        document.getElementById('total-active-time').textContent = 
+            data.totalActiveTime ? `${Math.round(data.totalActiveTime)} min` : '-- min';
+        document.getElementById('total-calories').textContent = 
+            data.totalCalories ? `${Math.round(data.totalCalories)} kcal` : '-- kcal';
+        document.getElementById('total-steps').textContent = 
+            data.totalSteps ? `${data.totalSteps.toLocaleString()} steps` : '-- steps';
+    }
+
+    // データ取得関数
+    async function fetchSessionData(sessionId) {
+        const response = await fetch(`/api/sessions/${sessionId}`);
+        return response.json();
+    }
+
+    async function fetchIntegratedHealthData(date) {
+        const response = await fetch(`/api/health/integrated/${formatDate(date)}`);
+        return response.json();
+    }
+
+    async function fetchDailyFit2GoData(date) {
+        const response = await fetch(`/api/daily/fit2go/${formatDate(date)}`);
+        return response.json();
+    }
+
+    async function fetchGoogleFitData(date) {
+        const response = await fetch(`/api/daily/googlefit/${formatDate(date)}`);
+        return response.json();
+    }
+
+    async function fetchHealthConnectData(date) {
+        const response = await fetch(`/api/daily/healthconnect/${formatDate(date)}`);
+        return response.json();
+    }
+
+    // ユーティリティ関数
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // プロット作成関数
+    function createSessionPlots(data) {
+        Plotly.newPlot('session-details-plots', [
+            {
+                x: data.timestamps,
+                y: data.speed,
+                name: 'Speed (km/h)',
+                type: 'scatter'
+            },
+            {
+                x: data.timestamps,
+                y: data.heartRate,
+                name: 'Heart Rate (bpm)',
+                yaxis: 'y2',
+                type: 'scatter'
+            }
+        ], {
+            grid: { rows: 1, columns: 1, pattern: 'independent' },
+            yaxis: { title: 'Speed (km/h)' },
+            yaxis2: { title: 'Heart Rate (bpm)', overlaying: 'y', side: 'right' }
+        });
+    }
+
+    function createHealthMetricsPlot(data) {
+        Plotly.newPlot('health-metrics-plot', [
+            {
+                x: data.timestamps,
+                y: data.heartRate,
+                name: 'Heart Rate',
+                type: 'scatter'
+            },
+            {
+                x: data.timestamps,
+                y: data.steps,
+                name: 'Steps',
+                yaxis: 'y2',
+                type: 'scatter'
+            }
+        ], {
+            grid: { rows: 1, columns: 1, pattern: 'independent' },
+            yaxis: { title: 'Heart Rate (bpm)' },
+            yaxis2: { title: 'Steps', overlaying: 'y', side: 'right' }
+        });
+    }
+
+    function createDailyActivityPlot(data) {
+        const trace1 = {
+            x: data.timeSlots,
+            y: data.activityLevel,
+            type: 'bar',
+            name: 'Activity Level'
+        };
+
+        const trace2 = {
+            x: data.timeSlots,
+            y: data.heartRate,
+            type: 'scatter',
+            name: 'Heart Rate',
+            yaxis: 'y2'
+        };
+
+        const layout = {
+            title: 'Daily Activity Overview',
+            yaxis: { title: 'Activity Level' },
+            yaxis2: {
+                title: 'Heart Rate (bpm)',
+                overlaying: 'y',
+                side: 'right'
+            }
+        };
+
+        Plotly.newPlot('daily-activity-plot', [trace1, trace2], layout);
+    }
+
+    // データ統合関数
+    function integrateHealthData(fit2goData, googleFitData, healthConnectData) {
+        return {
+            avgHeartRate: calculateWeightedAverage([
+                { value: fit2goData.avgHeartRate, weight: fit2goData.duration },
+                { value: googleFitData.avgHeartRate, weight: googleFitData.duration },
+                { value: healthConnectData.avgHeartRate, weight: healthConnectData.duration }
+            ]),
+            totalActiveTime: (fit2goData.activeTime || 0) + 
+                           (googleFitData.activeTime || 0) + 
+                           (healthConnectData.activeTime || 0),
+            totalCalories: (fit2goData.calories || 0) + 
+                         (googleFitData.calories || 0) + 
+                         (healthConnectData.calories || 0),
+            totalSteps: (fit2goData.steps || 0) + 
+                      (googleFitData.steps || 0) + 
+                      (healthConnectData.steps || 0),
+            timeSlots: mergeTimeSlots([fit2goData, googleFitData, healthConnectData]),
+            activityLevel: calculateActivityLevels([fit2goData, googleFitData, healthConnectData]),
+            heartRate: mergeHeartRateData([fit2goData, googleFitData, healthConnectData])
+        };
+    }
+
+    // 統計計算関数
+    function calculateWeightedAverage(items) {
+        const totalWeight = items.reduce((sum, item) => sum + (item.weight || 0), 0);
+        if (totalWeight === 0) return null;
+        
+        const weightedSum = items.reduce((sum, item) => {
+            return sum + (item.value || 0) * (item.weight || 0);
+        }, 0);
+        
+        return weightedSum / totalWeight;
+    }
+
+    function mergeTimeSlots(dataSources) {
+        const allSlots = new Set();
+        dataSources.forEach(source => {
+            if (source.timeSlots) {
+                source.timeSlots.forEach(slot => allSlots.add(slot));
             }
         });
-        
-        calendar.render();
+        return Array.from(allSlots).sort();
     }
-    
-    function loadSessionDates() {
-        fetch('/api/sessions/dates')
-            .then(response => response.json())
-            .then(data => {
-                const events = data.map(session => ({
-                    title: 'Workout',
-                    start: session.start_time,
-                    end: session.end_time,
-                    backgroundColor: '#007bff',
-                    extendedProps: {
-                        sessionId: session.id
-                    }
-                }));
-                
-                calendar.removeAllEvents();
-                calendar.addEventSource(events);
-            })
-            .catch(error => console.error('Error loading session dates:', error));
+
+    function calculateActivityLevels(dataSources) {
+        const timeSlots = mergeTimeSlots(dataSources);
+        return timeSlots.map(slot => {
+            return Math.max(...dataSources.map(source => 
+                source.activityLevels ? (source.activityLevels[slot] || 0) : 0
+            ));
+        });
     }
-    
-    function loadDailyStats(dateStr) {
-        fetch(`/api/sessions/daily?date=${dateStr}`)
-            .then(response => response.json())
-            .then(data => {
-                const statsContainer = document.getElementById('daily-stats');
-                if (data.length === 0) {
-                    statsContainer.innerHTML = '<p class="text-muted">No activity recorded for this date</p>';
-                    return;
-                }
-                
-                // 日次サマリーの作成
-                const totalDistance = data.reduce((sum, d) => sum + d.total_distance, 0);
-                const totalCalories = data.reduce((sum, d) => sum + d.total_calories, 0);
-                const sessionCount = new Set(data.map(d => d.session_id)).size;
-                
-                statsContainer.innerHTML = `
-                    <div class="daily-stat">
-                        <h6>Total Sessions</h6>
-                        <p>${sessionCount}</p>
-                    </div>
-                    <div class="daily-stat">
-                        <h6>Total Distance</h6>
-                        <p>${totalDistance.toFixed(2)} km</p>
-                    </div>
-                    <div class="daily-stat">
-                        <h6>Total Calories</h6>
-                        <p>${Math.round(totalCalories)} kcal</p>
-                    </div>
-                `;
-                
-                // アクティビティグラフの作成
-                const traces = [{
-                    x: data.map(d => d.time),
-                    y: data.map(d => d.avg_speed),
-                    name: 'Average Speed',
-                    type: 'bar'
-                }, {
-                    x: data.map(d => d.time),
-                    y: data.map(d => d.avg_rpm),
-                    name: 'Average RPM',
-                    type: 'bar'
-                }];
-                
-                const layout = {
-                    title: 'Daily Activity',
-                    barmode: 'group',
-                    xaxis: { title: 'Time' },
-                    yaxis: { title: 'Value' },
-                    height: 300,
-                    margin: { t: 30, r: 30, l: 50, b: 50 }
-                };
-                
-                Plotly.newPlot('daily-activity-plot', traces, layout);
-            })
-            .catch(error => console.error('Error loading daily stats:', error));
-    }
-    
-    function showSessionDetails(sessionId) {
-        fetch(`/api/sessions/${sessionId}`)
-            .then(response => response.json())
-            .then(data => {
-                const modalEl = document.getElementById('sessionModal');
-                const modal = new bootstrap.Modal(modalEl);
-                
-                // セッション詳細のプロット作成
-                const timeData = data.data_points.map(d => d.timestamp);
-                const plotData = [{
-                    x: timeData,
-                    y: data.data_points.map(d => d.speed_kmh),
-                    name: 'Speed',
-                    type: 'scatter'
-                }, {
-                    x: timeData,
-                    y: data.data_points.map(d => d.rpm),
-                    name: 'RPM',
-                    type: 'scatter',
-                    yaxis: 'y2'
-                }];
-                
-                const layout = {
-                    title: 'Session Details',
-                    xaxis: { title: 'Time' },
-                    yaxis: { title: 'Speed (km/h)' },
-                    yaxis2: {
-                        title: 'RPM',
-                        overlaying: 'y',
-                        side: 'right'
-                    },
-                    height: 300,
-                    margin: { t: 30, r: 50, l: 50, b: 50 }
-                };
-                
-                Plotly.newPlot('session-details-plots', plotData, layout);
-                
-                // セッションメトリクスの表示
-                document.getElementById('session-metrics').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="metric-card">
-                                <h6>Total Time</h6>
-                                <p>${formatTime(data.total_time_seconds)}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="metric-card">
-                                <h6>Total Distance</h6>
-                                <p>${data.total_distance_km.toFixed(2)} km</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="metric-card">
-                                <h6>Total Calories</h6>
-                                <p>${Math.round(data.total_calories_kcal)} kcal</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                modal.show();
-            })
-            .catch(error => console.error('Error loading session details:', error));
-    }
-    
-    function formatTime(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    function mergeHeartRateData(dataSources) {
+        const timeSlots = mergeTimeSlots(dataSources);
+        return timeSlots.map(slot => {
+            const values = dataSources
+                .map(source => source.heartRates ? source.heartRates[slot] : null)
+                .filter(value => value !== null);
+            return values.length > 0 ? Math.max(...values) : null;
+        });
     }
 });

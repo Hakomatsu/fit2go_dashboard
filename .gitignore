@@ -30,6 +30,8 @@ ENV/
 .vscode/
 *.swp
 *.swo
+.editorconfig
+.pre-commit-config.yaml
 
 # Environment Variables
 .env

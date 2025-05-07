@@ -1,9 +1,12 @@
 from datetime import datetime
-from . import db
+
 from sqlalchemy.dialects.postgresql import JSONB
 
+from . import db
+
+
 class FitnessSession(db.Model):
-    __tablename__ = 'fitness_sessions'
+    __tablename__ = "fitness_sessions"
 
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(50), nullable=False)
@@ -16,16 +19,21 @@ class FitnessSession(db.Model):
     average_rpm = db.Column(db.Float, default=0.0)
     average_mets = db.Column(db.Float, default=0.0)
     raw_data = db.Column(JSONB)
-    data_points = db.relationship('DataPoint', backref='session', lazy=True, cascade='all, delete-orphan')
+    data_points = db.relationship(
+        "DataPoint", backref="session", lazy=True, cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
-        return f'<FitnessSession {self.id} - {self.start_time}>'
+        return f"<FitnessSession {self.id} - {self.start_time}>"
+
 
 class DataPoint(db.Model):
-    __tablename__ = 'data_points'
+    __tablename__ = "data_points"
 
     id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('fitness_sessions.id'), nullable=False)
+    session_id = db.Column(
+        db.Integer, db.ForeignKey("fitness_sessions.id"), nullable=False
+    )
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     speed_kmh = db.Column(db.Float)
     rpm = db.Column(db.Float)
@@ -35,4 +43,4 @@ class DataPoint(db.Model):
     mets = db.Column(db.Float)
 
     def __repr__(self):
-        return f'<DataPoint {self.id} - {self.timestamp}>'
+        return f"<DataPoint {self.id} - {self.timestamp}>"

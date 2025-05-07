@@ -2,6 +2,7 @@
 let currentSession = null;
 let historyChart = null;
 let dailyChart = null;
+let activeSessionId = null;
 
 // ゲージチャートの設定
 const gaugeLayout = {
@@ -109,15 +110,120 @@ function formatTotalTime(seconds) {
     return `${h}h ${m}m`;
 }
 
+// セッションの終了
+async function endSession(sessionId, autoSync = true) {
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/end?auto_sync=${autoSync}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            // セッション終了の成功を通知
+            showNotification('セッションを終了しました', 'success');
+            
+            if (result.sync_result) {
+                // 同期結果の通知
+                if (result.sync_result.google_fit.success) {
+                    showNotification('Google Fitと同期しました', 'success');
+                }
+                if (result.sync_result.health_connect.success) {
+                    showNotification('Health Connectと同期しました', 'success');
+                }
+            }
+            
+            // アクティブセッションをリセット
+            activeSessionId = null;
+            resetDisplays();
+        } else {
+            showNotification('セッションの終了に失敗しました: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error ending session:', error);
+        showNotification('セッションの終了中にエラーが発生しました', 'error');
+    }
+}
+
+// 手動同期
+async function syncSession(sessionId) {
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/sync`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        if (result.google_fit.success || result.health_connect.success) {
+            if (result.google_fit.success) {
+                showNotification('Google Fitと同期しました', 'success');
+            }
+            if (result.health_connect.success) {
+                showNotification('Health Connectと同期しました', 'success');
+            }
+        } else {
+            const errors = [];
+            if (result.google_fit.error) errors.push(`Google Fit: ${result.google_fit.error}`);
+            if (result.health_connect.error) errors.push(`Health Connect: ${result.health_connect.error}`);
+            showNotification('同期に失敗しました: ' + errors.join(', '), 'error');
+        }
+    } catch (error) {
+        console.error('Error syncing session:', error);
+        showNotification('同期中にエラーが発生しました', 'error');
+    }
+}
+
+// 通知表示
+function showNotification(message, type = 'info') {
+    // Bootstrapのトースト通知を使用
+    const toastHtml = `
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+            <div class="toast-header bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} text-white">
+                <strong class="me-auto">Fit2Go</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+    }
+    
+    const toastElement = document.createElement('div');
+    toastElement.innerHTML = toastHtml;
+    document.getElementById('toast-container').appendChild(toastElement.firstChild);
+    
+    const toast = new bootstrap.Toast(document.getElementById('toast-container').lastChild);
+    toast.show();
+}
+
 // リアルタイムデータの更新
 function updateRealTimeData() {
     fetch('/api/sessions/current')
         .then(response => response.json())
         .then(data => {
             if (data.status === 'no_active_session') {
+                if (activeSessionId) {
+                    // アクティブなセッションが終了された場合
+                    endSession(activeSessionId);
+                }
                 resetDisplays();
                 return;
             }
+
+            // セッションIDを保存
+            activeSessionId = data.session_id;
 
             // メーターの更新
             Plotly.update('speed-gauge', {'value': [data.current_speed_kmh]});
