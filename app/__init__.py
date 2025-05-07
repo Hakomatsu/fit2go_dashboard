@@ -5,32 +5,35 @@ from .models import init_db, db
 from datetime import datetime
 import pytz
 
-def create_app(config_name='default'):
+
+def create_app(config_name="default"):
     app = Flask(__name__)
-    
+
     # Load configuration
     app.config.from_object(config[config_name])
-    
+
     # Initialize database
     init_db(app)
-    
+
     # Set timezone
-    app.timezone = pytz.timezone(app.config['TIMEZONE'])
-    
+    app.timezone = pytz.timezone(app.config["TIMEZONE"])
+
     # Register blueprints
     from .routes import main, api
+
     app.register_blueprint(main.bp)
-    app.register_blueprint(api.bp, url_prefix='/api')
-    
+    app.register_blueprint(api.bp, url_prefix="/api")
+
     @app.context_processor
     def utility_processor():
-        def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
+        def format_datetime(value, format="%Y-%m-%d %H:%M:%S"):
             if value is None:
-                return ''
+                return ""
             if not isinstance(value, datetime):
                 return value
             local_dt = value.astimezone(app.timezone)
             return local_dt.strftime(format)
+
         return dict(format_datetime=format_datetime)
-    
+
     return app
