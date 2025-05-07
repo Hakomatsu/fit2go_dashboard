@@ -67,70 +67,51 @@ flask db upgrade
 
 ## Production Deployment
 
-### Standard Launch
-```bash
-gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
+### Deploy to Render
+
+1. Create and Set Up Render Account
+- Create a Render account and log in
+- Click "New +" and select "Web Service"
+
+2. Configure the Service
+- Connect your Git repository to Render
+- Configure the following settings:
+  * Name: fit2go-dashboard (or your preferred name)
+  * Runtime: Python
+  * Build Command: `pip install -r requirements.txt`
+  * Start Command: `gunicorn wsgi:app`
+
+3. Set Environment Variables
+In the Render dashboard, set the following environment variables:
+```
+DATABASE_URL=postgres://... (PostgreSQL URL from Render service)
+SECRET_KEY=your-secret-key
+FLASK_ENV=production
 ```
 
-### Systemd Service Setup
-1. Create service file
+4. Database Setup
+- Create a PostgreSQL database in Render
+- The `DATABASE_URL` environment variable will be automatically set
+
+### M5Stack Configuration
+
+1. Edit M5Stack configuration file
+- Update the data endpoint URL to your Render application URL
+- Configure HTTPS certificates if necessary
+
+### Backup Configuration (Optional)
+
+Render's PostgreSQL provides automatic backups, but if additional backups are needed:
+
+1. Set up cron job on Render
 ```bash
-sudo nano /etc/systemd/system/fit2go.service
-```
-
-2. Add the following content:
-```ini
-[Unit]
-Description=Fit2Go Dashboard
-After=network.target
-
-[Service]
-User=fit2go
-Group=fit2go
-WorkingDirectory=/path/to/fit2go_dashboard
-Environment="PATH=/path/to/fit2go_dashboard/venv/bin"
-ExecStart=/path/to/fit2go_dashboard/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-3. Enable and start service
-```bash
-sudo systemctl enable fit2go
-sudo systemctl start fit2go
-```
-
-## Database Backup
-
-1. Configure automatic backup
-```bash
-# /etc/cron.daily/fit2go-backup
-pg_dump fit2go_dashboard | gzip > /backup/fit2go_$(date +%Y%m%d).sql.gz
+# Execute daily backup
+pg_dump $DATABASE_URL | gzip > /backup/fit2go_$(date +%Y%m%d).sql.gz
 ```
 
 ## Important Notes
 
-- Always enable HTTPS in production
-- Redis is recommended for session persistence
-  ```bash
-  pip install redis
-  ```
-- Configure log rotation
-  ```bash
-  sudo nano /etc/logrotate.d/fit2go
-  ```
-  ```
-  /var/log/fit2go/*.log {
-      daily
-      rotate 14
-      compress
-      delaycompress
-      missingok
-      notifempty
-      create 0640 fit2go fit2go
-  }
-  ```
-- Set up regular database backups
-- Consider implementing application monitoring and metrics collection
+- Free tier on Render has sleep mode, which may cause initial load delay
+- Paid plan recommended for continuous operation
+- HTTPS is automatically enabled
+- Application monitoring available through Render dashboard

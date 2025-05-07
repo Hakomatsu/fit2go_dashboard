@@ -67,72 +67,53 @@ flask db upgrade
    - android.permission.health.READ_HEART_RATE
    - android.permission.health.WRITE_HEART_RATE
 
-## 本番環境での実行
+## 本番環境でのデプロイ
 
-### 通常の起動
-```bash
-gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
+### Renderへのデプロイ
+
+1. Renderアカウントの作成とセットアップ
+- Renderのアカウントを作成し、ログイン
+- 「New +」から「Web Service」を選択
+
+2. サービスの設定
+- GitリポジトリをRenderに接続
+- 以下の設定を行う：
+  * Name: fit2go-dashboard（任意）
+  * Runtime: Python
+  * Build Command: `pip install -r requirements.txt`
+  * Start Command: `gunicorn wsgi:app`
+
+3. 環境変数の設定
+Renderのダッシュボードで以下の環境変数を設定：
+```
+DATABASE_URL=postgres://...（RenderのPostgreSQLサービスのURL）
+SECRET_KEY=your-secret-key
+FLASK_ENV=production
 ```
 
-### Systemdを使用した自動起動の設定
-1. サービスファイルの作成
+4. データベースの設定
+- RenderでPostgreSQLデータベースを作成
+- 自動的に`DATABASE_URL`環境変数が設定される
+
+### M5Stackの設定
+
+1. M5Stackの設定ファイルを編集
+- データ送信先URLをRenderのアプリケーションURLに変更
+- 必要に応じてHTTPS証明書の設定を行う
+
+### バックアップ設定（オプション）
+
+RenderのPostgreSQLは自動的にバックアップを提供しますが、追加のバックアップが必要な場合：
+
+1. Render上でcron jobを設定
 ```bash
-sudo nano /etc/systemd/system/fit2go.service
-```
-
-2. 以下の内容を追加:
-```ini
-[Unit]
-Description=Fit2Go Dashboard
-After=network.target
-
-[Service]
-User=fit2go
-Group=fit2go
-WorkingDirectory=/path/to/fit2go_dashboard
-Environment="PATH=/path/to/fit2go_dashboard/venv/bin"
-ExecStart=/path/to/fit2go_dashboard/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-3. サービスの有効化と起動
-```bash
-sudo systemctl enable fit2go
-sudo systemctl start fit2go
-```
-
-## データベースのバックアップ
-
-1. 自動バックアップの設定
-```bash
-# /etc/cron.daily/fit2go-backup
-pg_dump fit2go_dashboard | gzip > /backup/fit2go_$(date +%Y%m%d).sql.gz
+# 毎日のバックアップを実行
+pg_dump $DATABASE_URL | gzip > /backup/fit2go_$(date +%Y%m%d).sql.gz
 ```
 
 ## 注意事項
 
-- 本番環境では必ずHTTPSを有効にしてください
-- セッションの永続化にはRedisの使用を推奨します
-  ```bash
-  pip install redis
-  ```
-- ログローテーションの設定を忘れずに行ってください
-  ```bash
-  sudo nano /etc/logrotate.d/fit2go
-  ```
-  ```
-  /var/log/fit2go/*.log {
-      daily
-      rotate 14
-      compress
-      delaycompress
-      missingok
-      notifempty
-      create 0640 fit2go fit2go
-  }
-  ```
-- 定期的なデータベースバックアップを設定してください
-- アプリケーションの監視とメトリクス収集を設定することを推奨します
+- Renderの無料プランではスリープモードがあるため、初回アクセス時に起動に時間がかかる場合があります
+- 継続的な運用には有料プランの使用を推奨
+- HTTPSは自動的に有効化されます
+- アプリケーションの監視はRenderのダッシュボードで確認可能
