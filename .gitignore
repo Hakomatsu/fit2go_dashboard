@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
 
 # Virtual Environment
 venv/
@@ -39,12 +40,26 @@ ENV/
 .env.*.local
 
 # Database
+instance/
 *.db
 *.sqlite3
+
+# Flask
+.flask_session/
+
+# Migration files (migrationsディレクトリ自体は管理対象とするが、生成されたバージョンファイルは除外)
+migrations/versions/
+!migrations/versions/.gitkeep
 
 # Logs
 *.log
 logs/
 
-# Other
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
