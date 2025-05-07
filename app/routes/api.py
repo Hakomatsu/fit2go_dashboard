@@ -1,7 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app
-from ..models import db, FitnessSession, DataPoint
-from datetime import datetime
 import json
+from datetime import datetime
+
+from flask import Blueprint, current_app, jsonify, request
+
+from ..models import DataPoint, FitnessSession, db
 
 bp = Blueprint("api", __name__)
 
@@ -145,12 +147,13 @@ def download_data():
     - end_date: データの終了日 (ISO形式: YYYY-MM-DD)
     - device_id: 特定デバイスのみのデータをフィルタリング (オプション)
     """
-    from flask import send_file
-    import pandas as pd
-    import tempfile
-    import os
     import json
-    from datetime import datetime, timedelta, time
+    import os
+    import tempfile
+    from datetime import datetime, time, timedelta
+
+    import pandas as pd
+    from flask import send_file
 
     # クエリパラメータの取得
     format_type = request.args.get("format", "json")

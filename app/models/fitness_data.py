@@ -1,6 +1,8 @@
 from datetime import datetime
-from . import db
+
 from sqlalchemy.dialects.postgresql import JSONB
+
+from . import db
 
 
 class FitnessSession(db.Model):

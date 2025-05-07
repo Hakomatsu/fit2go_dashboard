@@ -1,10 +1,11 @@
 # app/services/google_fit.py
 
-import os
 import json
-import requests
+import os
 from datetime import datetime, timezone
-from flask import current_app, url_for, session, redirect, request
+
+import requests
+from flask import current_app, redirect, request, session, url_for
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -110,7 +111,7 @@ def handle_callback(request):
 
 def upload_fitness_session(session_id):
     """フィットネスセッションをGoogle Fitにアップロード"""
-    from ..models import FitnessSession, DataPoint
+    from ..models import DataPoint, FitnessSession
 
     # セッションの取得
     fitness_session = FitnessSession.query.get(session_id)
@@ -214,8 +215,9 @@ def upload_fitness_session(session_id):
 
 def end_fitness_session(session_id, auto_sync=True):
     """フィットネスセッションを終了し、必要に応じて同期する"""
-    from ..models import db, FitnessSession
     import datetime
+
+    from ..models import FitnessSession, db
 
     session = FitnessSession.query.get(session_id)
     if not session:
@@ -268,7 +270,7 @@ def sync_session_to_services(session_id):
 
 def upload_to_health_connect(session_id):
     """Health Connectにフィットネスデータをアップロード"""
-    from ..models import FitnessSession, DataPoint
+    from ..models import DataPoint, FitnessSession
 
     # セッションの取得
     session = FitnessSession.query.get(session_id)

@@ -1,9 +1,12 @@
+from datetime import datetime
+
+import pytz
 from flask import Flask
 from flask_migrate import Migrate
+
 from config.config import config
-from .models import init_db, db
-from datetime import datetime
-import pytz
+
+from .models import db, init_db
 
 
 def create_app(config_name="default"):
@@ -19,7 +22,7 @@ def create_app(config_name="default"):
     app.timezone = pytz.timezone(app.config["TIMEZONE"])
 
     # Register blueprints
-    from .routes import main, api
+    from .routes import api, main
 
     app.register_blueprint(main.bp)
     app.register_blueprint(api.bp, url_prefix="/api")
