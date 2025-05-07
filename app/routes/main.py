@@ -6,8 +6,11 @@ from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy import func
 
 from ..models import DataPoint, FitnessSession, db
-from ..services.google_fit import (get_authorization_url, handle_callback,
-                                   upload_fitness_session)
+from ..services.google_fit import (
+    get_authorization_url,
+    handle_callback,
+    upload_fitness_session,
+)
 
 bp = Blueprint("main", __name__)
 
