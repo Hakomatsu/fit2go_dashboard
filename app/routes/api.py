@@ -29,6 +29,15 @@ def receive_data():
 
     try:
         data = request.get_json()
+        print("\n=== Received M5Stack Data ===")
+        print("Speed:", data.get("speed_kmh", 0), "km/h")
+        print("RPM:", data.get("rpm", 0))
+        print("Session Time:", data.get("session_time_s", 0), "seconds")
+        print("Session Distance:", data.get("session_dist_km", 0), "km")
+        print("Session Calories:", data.get("session_cal_kcal", 0), "kcal")
+        print("Raw data:", data)  # 生データの出力を追加
+        print("==========================\n")
+
         device_id = data.get("device_id")
         if not device_id:
             return jsonify({"error": "device_id is required"}), 400
@@ -49,17 +58,16 @@ def receive_data():
                 raw_data=data
             )
             db.session.add(session)
-            # セッションを即時コミットしてIDを取得
             db.session.flush()
+            print("Created new session:", session.id)
 
         # データポイントの作成
         timestamp = datetime.utcnow()
         if "timestamp_ms" in data:
             try:
-                # UNIXタイムスタンプ（ミリ秒）をdatetimeに変換
                 timestamp = datetime.fromtimestamp(data["timestamp_ms"] / 1000.0)
             except (ValueError, TypeError):
-                pass  # タイムスタンプの変換に失敗した場合は現在時刻を使用
+                pass
 
         data_point = DataPoint(
             session_id=session.id,
@@ -72,6 +80,15 @@ def receive_data():
             mets=data.get("mets", 0.0)
         )
         db.session.add(data_point)
+        print("\n=== Saving Data Point ===")
+        print("Session ID:", session.id)
+        print("Timestamp:", timestamp)
+        print("Speed:", data_point.speed_kmh, "km/h")
+        print("RPM:", data_point.rpm)
+        print("Distance:", data_point.distance_km, "km")
+        print("Calories:", data_point.calories_kcal, "kcal")
+        print("Time:", data_point.time_seconds, "seconds")
+        print("=======================\n")
 
         # セッションデータの更新
         session.total_time_seconds = data.get("total_time_s", session.total_time_seconds)
@@ -87,6 +104,7 @@ def receive_data():
 
     except Exception as e:
         db.session.rollback()
+        print("Error saving data:", str(e))
         return jsonify({"error": str(e)}), 500
 
 

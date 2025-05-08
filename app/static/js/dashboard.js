@@ -258,17 +258,17 @@ function updateRealTimeData() {
 
 // セッション履歴の更新
 function updateSessionHistory() {
-    const endTime = new Date();
-    const startTime = new Date(endTime - 30 * 60000); // 過去30分
-
-    // ISO 8601形式の文字列を生成
-    const formatDate = (date) => date.toISOString();
-
-    fetch(`/api/sessions/history?start=${formatDate(startTime)}&end=${formatDate(endTime)}`)
+    fetch('/api/sessions/history')
         .then(response => response.json())
         .then(data => {
+            // デバッグ出力を追加
+            console.log('Received history data:', data);
+            
             // データが空の場合は更新しない
-            if (!data || data.length === 0) return;
+            if (!data || data.length === 0) {
+                console.log('No history data available');
+                return;
+            }
 
             const traces = [{
                 x: data.map(d => new Date(d.timestamp)),
@@ -295,23 +295,34 @@ function updateSessionHistory() {
                 yaxis: { 
                     title: 'Speed (km/h)',
                     titlefont: { color: '#1f77b4' },
-                    tickfont: { color: '#1f77b4' }
+                    tickfont: { color: '#1f77b4' },
+                    range: [0, 60]  // 速度の範囲を0-60km/hに設定
                 },
                 yaxis2: {
                     title: 'RPM',
                     titlefont: { color: '#2ca02c' },
                     tickfont: { color: '#2ca02c' },
                     overlaying: 'y',
-                    side: 'right'
+                    side: 'right',
+                    range: [0, 200]  // RPMの範囲を0-200に設定
+                },
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: 1.2
                 },
                 height: 300,
                 margin: { t: 30, r: 50, l: 50, b: 50 }
             };
 
-            // グラフを更新（データがない場合は更新しない）
+            // グラフを更新
             Plotly.react('session-history-plot', traces, layout);
+            console.log('Updated session history plot');
         })
-        .catch(error => console.error('Error fetching session history:', error));
+        .catch(error => {
+            console.error('Error fetching session history:', error);
+            console.error('Stack trace:', error.stack);
+        });
 }
 
 // デイリーサマリーの更新

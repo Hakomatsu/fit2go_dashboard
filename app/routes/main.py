@@ -278,12 +278,17 @@ def get_session_history():
     # 現在のアクティブセッションを取得
     session = FitnessSession.query.filter_by(end_time=None).first()
     if not session:
+        print("\n=== Session History ===")
+        print("No active session found")
+        print("=====================\n")
         return jsonify([])
 
-    # 現在時刻から30分前までのデータを取得
-    end_time = datetime.utcnow()
+    # 現在時刻から30分前までのデータを取得（ローカル時間で処理）
+    now = datetime.now()
+    end_time = now
     start_time = end_time - timedelta(minutes=30)
 
+    # データポイントを取得
     data_points = (
         DataPoint.query.filter_by(session_id=session.id)
         .filter(DataPoint.timestamp >= start_time)
@@ -292,7 +297,17 @@ def get_session_history():
         .all()
     )
 
-    return jsonify([
+    print("\n=== Session History ===")
+    print(f"Session ID: {session.id}")
+    print(f"Time range: {start_time} to {end_time}")
+    print(f"Number of data points: {len(data_points)}")
+    if data_points:
+        print(f"First point: Speed={data_points[0].speed_kmh}km/h, RPM={data_points[0].rpm}")
+        print(f"Last point: Speed={data_points[-1].speed_kmh}km/h, RPM={data_points[-1].rpm}")
+    print("=====================\n")
+
+    # タイムスタンプをISOフォーマットで返す
+    result = [
         {
             "timestamp": point.timestamp.isoformat(),
             "speed_kmh": point.speed_kmh,
@@ -303,4 +318,6 @@ def get_session_history():
             "mets": point.mets
         }
         for point in data_points
-    ])
+    ]
+
+    return jsonify(result)
