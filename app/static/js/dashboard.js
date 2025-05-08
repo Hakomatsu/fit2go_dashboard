@@ -20,13 +20,13 @@ function initializeGauges() {
         value: 0,
         title: { text: 'Speed (km/h)' },
         gauge: {
-            axis: { range: [0, 40] },
+            axis: { range: [0, 60] },  // 最大値を60に変更
             bar: { color: '#1f77b4' },
             steps: [
-                { range: [0, 10], color: 'lightgray' },
-                { range: [10, 20], color: '#d3e6f9' },
-                { range: [20, 30], color: '#9ecae1' },
-                { range: [30, 40], color: '#6baed6' }
+                { range: [0, 15], color: 'lightgray' },
+                { range: [15, 30], color: '#d3e6f9' },
+                { range: [30, 45], color: '#9ecae1' },
+                { range: [45, 60], color: '#6baed6' }
             ]
         }
     }], gaugeLayout);
@@ -38,13 +38,13 @@ function initializeGauges() {
         value: 0,
         title: { text: 'RPM' },
         gauge: {
-            axis: { range: [0, 120] },
+            axis: { range: [0, 200] },  // 最大値を200に変更
             bar: { color: '#2ca02c' },
             steps: [
-                { range: [0, 30], color: 'lightgray' },
-                { range: [30, 60], color: '#d3edd3' },
-                { range: [60, 90], color: '#a1d99b' },
-                { range: [90, 120], color: '#74c476' }
+                { range: [0, 50], color: 'lightgray' },
+                { range: [50, 100], color: '#d3edd3' },
+                { range: [100, 150], color: '#a1d99b' },
+                { range: [150, 200], color: '#74c476' }
             ]
         }
     }], gaugeLayout);
@@ -243,7 +243,7 @@ function updateRealTimeData() {
             document.getElementById('current-distance').textContent = 
                 `${(data.session_dist_km || 0).toFixed(2)} km`;
             document.getElementById('current-calories').textContent = 
-                `${Math.round(data.session_cal_kcal || 0)} kcal`;
+                `${(data.session_cal_kcal || 0).toFixed(1)} kcal`;  // 小数点第一位まで表示
             document.getElementById('current-time').textContent = 
                 formatTime(data.session_time_s || 0);
 
