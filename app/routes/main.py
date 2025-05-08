@@ -51,6 +51,10 @@ def get_current_session():
             "current_speed_kmh": latest_point.speed_kmh if latest_point else 0,
             "current_rpm": latest_point.rpm if latest_point else 0,
             "current_mets": latest_point.mets if latest_point else 0,
+            # セッションの現在の値を追加
+            "session_time_s": latest_point.time_seconds if latest_point else 0,
+            "session_dist_km": latest_point.distance_km if latest_point else 0,
+            "session_cal_kcal": latest_point.calories_kcal if latest_point else 0
         }
     )
 
@@ -266,3 +270,37 @@ def get_daily_source_data(source, date):
 
     else:
         return jsonify({"error": "Invalid source"}), 400
+
+
+@bp.route("/api/sessions/history")
+def get_session_history():
+    """直近30分間のセッションデータを取得"""
+    # 現在のアクティブセッションを取得
+    session = FitnessSession.query.filter_by(end_time=None).first()
+    if not session:
+        return jsonify([])
+
+    # 現在時刻から30分前までのデータを取得
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(minutes=30)
+
+    data_points = (
+        DataPoint.query.filter_by(session_id=session.id)
+        .filter(DataPoint.timestamp >= start_time)
+        .filter(DataPoint.timestamp <= end_time)
+        .order_by(DataPoint.timestamp.asc())
+        .all()
+    )
+
+    return jsonify([
+        {
+            "timestamp": point.timestamp.isoformat(),
+            "speed_kmh": point.speed_kmh,
+            "rpm": point.rpm,
+            "distance_km": point.distance_km,
+            "calories_kcal": point.calories_kcal,
+            "time_seconds": point.time_seconds,
+            "mets": point.mets
+        }
+        for point in data_points
+    ])

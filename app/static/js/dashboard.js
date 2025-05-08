@@ -261,28 +261,46 @@ function updateSessionHistory() {
     const endTime = new Date();
     const startTime = new Date(endTime - 30 * 60000); // 過去30分
 
-    fetch(`/api/sessions/history?start=${startTime.toISOFormat()}&end=${endTime.toISOFormat()}`)
+    // ISO 8601形式の文字列を生成
+    const formatDate = (date) => date.toISOString();
+
+    fetch(`/api/sessions/history?start=${formatDate(startTime)}&end=${formatDate(endTime)}`)
         .then(response => response.json())
         .then(data => {
+            // データが空の場合は更新しない
+            if (!data || data.length === 0) return;
+
             const traces = [{
-                x: data.map(d => d.timestamp),
+                x: data.map(d => new Date(d.timestamp)),
                 y: data.map(d => d.speed_kmh),
                 name: 'Speed',
-                type: 'scatter'
+                type: 'scatter',
+                line: { color: '#1f77b4' }
             }, {
-                x: data.map(d => d.timestamp),
+                x: data.map(d => new Date(d.timestamp)),
                 y: data.map(d => d.rpm),
                 name: 'RPM',
                 type: 'scatter',
-                yaxis: 'y2'
+                yaxis: 'y2',
+                line: { color: '#2ca02c' }
             }];
 
             const layout = {
                 title: 'Session History',
-                xaxis: { title: 'Time' },
-                yaxis: { title: 'Speed (km/h)' },
+                xaxis: { 
+                    title: 'Time',
+                    type: 'date',
+                    tickformat: '%H:%M:%S'
+                },
+                yaxis: { 
+                    title: 'Speed (km/h)',
+                    titlefont: { color: '#1f77b4' },
+                    tickfont: { color: '#1f77b4' }
+                },
                 yaxis2: {
                     title: 'RPM',
+                    titlefont: { color: '#2ca02c' },
+                    tickfont: { color: '#2ca02c' },
                     overlaying: 'y',
                     side: 'right'
                 },
@@ -290,6 +308,7 @@ function updateSessionHistory() {
                 margin: { t: 30, r: 50, l: 50, b: 50 }
             };
 
+            // グラフを更新（データがない場合は更新しない）
             Plotly.react('session-history-plot', traces, layout);
         })
         .catch(error => console.error('Error fetching session history:', error));
