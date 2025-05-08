@@ -12,18 +12,18 @@ Fit2Go DashboardはFlexispot Sit2Go フィットネスチェア用のWebダッ�
 
 ### リアルタイムモニタリング
 - 現在の速度（km/h）、RPM、METs値をタコメーター形式で表示
-- 運動距離、消費カロリー、経過時間のリアルタイム表示
-- セッションデータのグラフ表示
+- 運動距離、消費カロリー、経過時間をリアルタイムで表示
+- セッションデータの可視化
 
 ### デイリーサマリー
-- 15分単位での運動データ集計
-- 時間帯別の平均速度、RPM、距離、カロリーを表示
-- 日次の累計データ表示
+- 15分間隔での運動データ集計
+- 時間帯ごとの平均速度、RPM、距離、カロリーを表示
+- 日次累計データの表示
 
 ### カレンダー機能
-- 月別の運動記録閲覧
-- 日付別の詳細データ表示
-- セッション別の詳細グラフ表示
+- 月単位での運動記録閲覧
+- 日付ごとの詳細データ表示
+- セッションごとの詳細グラフ表示
 
 ### 累積データ管理
 - 総運動時間、総距離、総消費カロリーの表示
@@ -40,44 +40,19 @@ Fit2Go DashboardはFlexispot Sit2Go フィットネスチェア用のWebダッ�
 
 ## 開発環境のセットアップ
 
-1. リポジトリのクローン
-```bash
-git clone <repository-url>
-cd fit2go-dashboard
-```
+本プロジェクトには2つの開発環境設定方法があります：
 
-2. 仮想環境の作成と有効化
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-.\venv\Scripts\activate   # Windows
-```
+1. **Render.comを使用したデプロイ環境**
+詳細な手順は[デプロイガイド](deployment_ja.md)を参照してください。
 
-3. 依存関係のインストール
-```bash
-pip install -r requirements.txt
-```
-
-4. 環境変数の設定
-```bash
-cp .env.example .env
-# .envファイルを編集して必要な環境変数を設定
-```
-
-5. データベースのセットアップ
-```bash
-flask db upgrade
-```
-
-6. 開発サーバーの起動
-```bash
-flask run
-```
+2. **ローカル開発環境（local_testブランチ）**
+ローカルでの開発やテストを行う場合：
+- 日本語: [ローカル開発環境セットアップガイド](local_setup_jp.md)
+- English: [Local Development Setup Guide](local_setup.md)
 
 ## デプロイ
 
-このアプリケーションは[Render](https://render.com)にデプロイするように設定されています。
-デプロイの詳細な手順については[デプロイガイド](deployment_ja.md)を参照してください。
+本番環境へのデプロイについては[デプロイガイド](deployment_ja.md)を参照してください。
 
 ## 貢献
 

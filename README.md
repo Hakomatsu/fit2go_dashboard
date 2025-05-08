@@ -40,39 +40,15 @@ A web dashboard application for the Flexispot Sit2Go fitness chair. This applica
 
 ## Development Environment Setup
 
-1. Clone the repository
-```bash
-git clone <repository-url>
-cd fit2go-dashboard
-```
+There are two ways to set up the development environment:
 
-2. Create and activate virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-.\venv\Scripts\activate   # Windows
-```
+1. **Deployment Environment using Render.com**
+For detailed instructions, please refer to the [deployment guide](deployment.md).
 
-3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-4. Set environment variables
-```bash
-cp .env.example .env
-# Edit the .env file to set required environment variables
-```
-
-5. Setup database
-```bash
-flask db upgrade
-```
-
-6. Start development server
-```bash
-flask run
-```
+2. **Local Development Environment (local_test branch)**
+For local development and testing:
+- English: Please refer to the [Local Development Setup Guide](local_setup.md)
+- 日本語: [ローカル開発環境セットアップガイド](local_setup_jp.md)
 
 ## Deployment
 
